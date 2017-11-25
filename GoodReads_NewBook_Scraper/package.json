@@ -1,0 +1,18 @@
+{
+  "name": "goodreads_newbook_scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@rgrove/parse-xml": "github:rgrove/parse-xml",
+    "cheerio": "git+https://github.com/cheeriojs/cheerio.git",
+    "install": "^0.10.2",
+    "msgpack-lite": "^0.1.26",
+    "npm": "^5.5.1"
+  }
+}
