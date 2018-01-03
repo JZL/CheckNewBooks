@@ -164,11 +164,11 @@ function getAllNewCovers(id, newBooks, i){
                     var author = oldAuthorOut[id].authorName;
                     console.log(
                             "@@"+
-                            "<img src="+imgURL+">"+
+                            "<img src='"+imgURL+"'>"+
                             "<br>"+
-                            popularity+
-                            "\t"+author+
-                            "\t<a href='https://www.librarything.com/work/"+refNum+"'>"+
+                            "|"+popularity+
+                            "\t|"+author+
+                            "\t|<a href='https://www.librarything.com/work/"+refNum+"'>"+
                             title+
                             "</a><br>"
                             );
