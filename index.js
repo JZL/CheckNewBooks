@@ -5,10 +5,13 @@ const fs      = require('fs');
 
 //Start at -1 so when call next() and ++'s, -> 0
 var MSDELAY = 10000;
-var authorIndex = -1;
+var authorIndex  = -1;
+
 var allAuthorIDs = [];
 
 var oldAuthorOut = {};
+
+var newAuthors   = [];
 
 function readObjMP(){
     if(fs.existsSync("authors.msp")){
@@ -41,7 +44,9 @@ function startGetAuthor(id){
 
     if(!oldAuthorOut[id]){
         //Isn't already in oldAuthor
+        console.log("NEW AUTHOR "+id)
         oldAuthorOut[id] = {titles: {}};
+        newAuthors.push(id);
     }
     //+1 so don't have 0
     //1st page = 1 not 0
@@ -150,7 +155,12 @@ function getAllNewCovers(id, newBooks, i){
                 response.on('end', function() {
                     $ = cheerio.load(body);
                     var imgURL = $(".workCoverImage").attr("src"); //src image url
-                    var popularity = $("#middleColumn > div.wslcontainer > table > tr.wslcontent > td.firstchild > a").html(); //popularity of work
+                    var popularity = $("#middleColumn > div.wslcontainer > table > tr.wslcontent > td.firstchild > a").text(); //popularity of work
+
+                    if(newAuthors.indexOf(id)!=-1){
+                        //Was a new author, negate popularity so doesn't clutter with many new books
+                        popularity = "-"+popularity;
+                    }
                     var author = oldAuthorOut[id].authorName;
                     console.log(
                             "@@"+
