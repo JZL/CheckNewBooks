@@ -14,8 +14,8 @@ function readObjMP(){
     if(fs.existsSync("authors.msp")){
         oldAuthorOut = msgpack.decode(fs.readFileSync("authors.msp"));
     }else{
-        console.log("NO PREV AUTHORS.MSP SO HAVE TO SCRAPE EVERTHING :(")
-            oldAuthorOut = {};
+        console.log("NO PREV AUTHORS.MSP SO HAVE TO SCRAPE EVERTHING :(");
+        oldAuthorOut = {};
     }
 }
 
@@ -32,12 +32,12 @@ function writeObjMP(){
 }
 
 function startGetAuthor(id){
-    console.log(id +"\t("+(((authorIndex+1)/allAuthorIDs.length)*100).toFixed(3)+"%)")
-        if((authorIndex+1)%30 == 0){
-            //Every 30, write for safety
-            console.log("WRITING FOR SAFETY");
-            writeObjMP();
-        }
+    console.log(id +"\t("+(((authorIndex+1)/allAuthorIDs.length)*100).toFixed(3)+"%)");
+    if((authorIndex+1)%30 == 0){
+        //Every 30, write for safety
+        console.log("WRITING FOR SAFETY");
+        writeObjMP();
+    }
 
     if(!oldAuthorOut[id]){
         //Isn't already in oldAuthor
@@ -47,7 +47,7 @@ function startGetAuthor(id){
     //1st page = 1 not 0
     setTimeout(function(){
         getAuthor(id);
-    }, MSDELAY)
+    }, MSDELAY);
 }
 
 function getAuthor(id){
@@ -59,41 +59,41 @@ function getAuthor(id){
         response.on('end', function() {
             $ = cheerio.load(body);
             if(!oldAuthorOut[id].authorName){
-                console.log("\tNEW AUTHOR NAME "+$(".authorIdentification>h1").text())
-                    oldAuthorOut[id].authorName = $(".authorIdentification>h1").text()
+                console.log("\tNEW AUTHOR NAME "+$(".authorIdentification>h1").text());
+                oldAuthorOut[id].authorName = $(".authorIdentification>h1").text();
             }
             var books = $(".worklist>ul>li>a");
             //Quick check if new books, saves most of the time here
             //Check if exists in old && ...
-            //console.log("\t"+books.length+"==?"+Object.keys(oldAuthorOut[id].titles).length)
+            //console.log("\t"+books.length+"==?"+Object.keys(oldAuthorOut[id].titles).length);
             if(books.length > Object.keys(oldAuthorOut[id].titles).length){
-                var newBooks = []
-                    books.each(function(){
-                        //Might want to have key be title, don't know until test it
-                        var refNum = $(this).attr("href").replace("/work/", "");
-                        if(refNum!="" && !oldAuthorOut[id].titles[refNum]){
-                            //Is a new book!
-                            var title = $(this).attr("title")
-                                newBooks.push([refNum, title]);
-                            oldAuthorOut[id].titles[refNum] = title;
-                            console.log("\t"+title)
-                        }
-                    })
+                var newBooks = [];
+                books.each(function(){
+                    //Might want to have key be title, don't know until test it
+                    var refNum = $(this).attr("href").replace("/work/", "");
+                    if(refNum!="" && !oldAuthorOut[id].titles[refNum]){
+                        //Is a new book!
+                        var title = $(this).attr("title");
+                        newBooks.push([refNum, title]);
+                        oldAuthorOut[id].titles[refNum] = title;
+                        console.log("\t"+title);
+                    }
+                });
                 //Start at 0th index, saves having to have parent function that starts off at index i
                 getAllNewCovers(id, newBooks, 0);
             }else{
                 console.log("\tNo Need...Same/Less total");
                 nextAuthor();
             }
-        })
-    })
+        });
+    });
 }
 
 function nextAuthor(){
     authorIndex++;
     if(authorIndex >= allAuthorIDs.length){
-        console.log("DONE ALL AUTHORS")
-            writeObjMP()
+        console.log("DONE ALL AUTHORS");
+        writeObjMP();
     }else{
         startGetAuthor(allAuthorIDs[authorIndex]);
     }
@@ -127,15 +127,15 @@ function main(){
             $(".wrapper>.picture>a").each(function(){
                 var id = $(this).attr("href").replace("/author/", "");
                 if(id!=""){
-                    allAuthorIDs.push(id)
+                    allAuthorIDs.push(id);
                 }
-            })
-            allAuthorIDs = shuffle(allAuthorIDs)
+            });
+            allAuthorIDs = shuffle(allAuthorIDs);
 
             console.log(allAuthorIDs.join("@"));
             nextAuthor();
-        })
-    })
+        });
+    });
 }
 
 //newBooks = [refNum, title]
@@ -162,10 +162,10 @@ function getAllNewCovers(id, newBooks, i){
                             title+
                             "</a><br>"
                             );
-                    getAllNewCovers(id, newBooks, i+1)
-                })
-            })
-        }, MSDELAY)
+                    getAllNewCovers(id, newBooks, i+1);
+                });
+            });
+        }, MSDELAY);
     }else{
         //TODO make sure all authors happened
         nextAuthor();
