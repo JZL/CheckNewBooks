@@ -5,6 +5,10 @@ const fs      = require('fs');
 
 //Start at -1 so when call next() and ++'s, -> 0
 var MSDELAY = 10000;
+
+//If there are less than 2 members who own a book, assume isn't a 'real' new
+//copy (foreign translation, etc)
+var POPULARITY_THRESH = 2;
 var authorIndex  = -1;
 
 var allAuthorIDs = [];
@@ -44,7 +48,7 @@ function startGetAuthor(id){
 
     if(!oldAuthorOut[id]){
         //Isn't already in oldAuthor
-        console.log("NEW AUTHOR "+id)
+        console.log("NEW AUTHOR "+id);
         oldAuthorOut[id] = {titles: {}};
         newAuthors.push(id);
     }
@@ -67,21 +71,34 @@ function getAuthor(id){
                 console.log("\tNEW AUTHOR NAME "+$(".authorIdentification>h1").text());
                 oldAuthorOut[id].authorName = $(".authorIdentification>h1").text();
             }
-            var books = $(".worklist>ul>li>a");
+            var books = $(".worklist>ul>li");
             //Quick check if new books, saves most of the time here
             //Check if exists in old && ...
             //console.log("\t"+books.length+"==?"+Object.keys(oldAuthorOut[id].titles).length);
             if(books.length > Object.keys(oldAuthorOut[id].titles).length){
+                //{refNum, title, popularity, coverURL(optional)}
                 var newBooks = [];
                 books.each(function(){
                     //Might want to have key be title, don't know until test it
-                    var refNum = $(this).attr("href").replace("/work/", "");
+                    var childLink = $(this).children("a");
+                    var refNum = childLink.attr("href").replace("/work/", "");
                     if(refNum!="" && !oldAuthorOut[id].titles[refNum]){
                         //Is a new book!
-                        var title = $(this).attr("title");
-                        newBooks.push([refNum, title]);
+                        var title = childLink.attr("title");
+                        var popularity = parseInt($(this).children(".copies").text().replace(/ copies.*/, ""));
+
+                        //Was a new author, negate popularity so doesn't clutter with many new books
+                        if(newAuthors.indexOf(id)!=-1){
+                            popularity = -1*popularity;
+                        }
+
+                        newBooks.push({
+                            refNum: refNum, 
+                            title: title,
+                            pop: popularity
+                        })
                         oldAuthorOut[id].titles[refNum] = title;
-                        console.log("\t"+title);
+                        console.log("\t"+title+" | "+refNum+" | "+popularity);
                     }
                 });
                 //Start at 0th index, saves having to have parent function that starts off at index i
@@ -97,8 +114,8 @@ function getAuthor(id){
 function nextAuthor(){
     authorIndex++;
     if(authorIndex >= allAuthorIDs.length){
-        console.log("DONE ALL AUTHORS");
         writeObjMP();
+        console.log("DONE ALL AUTHORS");
     }else{
         startGetAuthor(allAuthorIDs[authorIndex]);
     }
@@ -143,42 +160,63 @@ function main(){
     });
 }
 
-//newBooks = [refNum, title]
+//Optional imgUrl
+function printHTMLLine(newBooks_i, id){
+    var author = oldAuthorOut[id].authorName;
+    var str = "@@";
+    if(newBooks_i.imgURL!=undefined){
+        str+="<img src='"+newBooks_i.imgURL+"'>"+
+            "<br>"
+    }
+    str+=   "|"+newBooks_i.pop+
+        "\t|"+author+
+        "\t|<a href='https://www.librarything.com/work/"+newBooks_i.refNum+"'>"+
+        newBooks_i.title+
+        "</a><br>";
+    console.log(str)
+}
+
+/*
+newBooks.push({
+    refNum: refNum, 
+    title: title,
+    pop: popularity
+})
+*/
 function getAllNewCovers(id, newBooks, i){
     if(i<newBooks.length){
-        setTimeout(function(){
-            var refNum = newBooks[i][0];
-            var title  = newBooks[i][1];
-            https.get("https://www.librarything.com/work/"+newBooks[i][0], function(response){
-                var body = '';
-                response.on('data', function(d) { body += d; });
-                response.on('end', function() {
-                    $ = cheerio.load(body);
-                    var imgURL = $(".workCoverImage").attr("src"); //src image url
-                    var popularity = $("#middleColumn > div.wslcontainer > table > tr.wslcontent > td.firstchild > a").text(); //popularity of work
+        if(Math.abs(newBooks[i].pop) <= POPULARITY_THRESH){
+            console.log("\t\tLess than popularity thresh so no image")
+            printHTMLLine(newBooks[i], id);
 
-                    if(newAuthors.indexOf(id)!=-1){
-                        //Was a new author, negate popularity so doesn't clutter with many new books
-                        popularity = "-"+popularity;
-                    }
-                    var author = oldAuthorOut[id].authorName;
-                    console.log(
-                            "@@"+
-                            "<img src='"+imgURL+"'>"+
-                            "<br>"+
-                            "|"+popularity+
-                            "\t|"+author+
-                            "\t|<a href='https://www.librarything.com/work/"+refNum+"'>"+
-                            title+
-                            "</a><br>"
-                            );
-                    getAllNewCovers(id, newBooks, i+1);
-                });
-            });
-        }, MSDELAY);
+            //Next
+            getAllNewCovers(id, newBooks, i+1);
+        }else{
+            console.log("\t\tMore than popularity thresh so getting image...")
+            setTimeout(function(){
+                getCoverImage(id, newBooks, i);
+            }, MSDELAY);
+        }
     }else{
-        //TODO make sure all authors happened
         nextAuthor();
     }
+}
+
+function getCoverImage(id, newBooks, i){
+    https.get("https://www.librarything.com/work/"+newBooks[i].refNum, function(response){
+        var body = '';
+        response.on('data', function(d) { body += d; });
+        response.on('end', function() {
+            $ = cheerio.load(body);
+            var imgURL = $(".workCoverImage").attr("src"); //src image url
+
+            newBooks[i].imgURL = imgURL;
+
+            printHTMLLine(newBooks[i], id);
+
+            //Next
+            getAllNewCovers(id, newBooks, i+1);
+        });
+    });
 }
 main();
